@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<title>Web Crypto API example</title>
+<link rel="stylesheet" href="style.css">
+<body>
+    <button onclick="addInputKey('symmetric')">Add Symmetric Key</button><input type="checkbox" id="createKey" name="createKey" checked><label for="createKey">Create Key</label>
+    <br>
+    <button onclick="addInputKey('asymmetric')">Generate Key Pair</button>
+    <input type="text" class="key">
+    <input type="text" class="publicKey" disabled><input type="text" class="privateKey" disabled>
+    <input type="text" class="key">
+    <p>Generated Key:</p>
+    
+</body>
+<script>
+    let crypoFun = {
+        hash: ['SHA-256', 'SHA-384', 'SHA-512']
+    }
+
+    const text = 'cleoII3911@pluto';
+
+async function digestMessage(message) {
+  let msgUint8 = new TextEncoder().encode(message);                           // encode as (utf-8) Uint8Array
+  let hashBuffer = await crypto.subtle.digest('SHA-512', msgUint8);           // hash the message
+  let hashArray = Array.from(new Uint8Array(hashBuffer));                     // convert buffer to byte array
+  let hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join(''); // convert bytes to hex string
+  let hexArray = hashHex.match(/[\s\S]{1,2}/g) || []; // Split hex string into hex pair array
+  hashArray = hexArray.map(b => parseInt(b, 16)) // Hex array to Byte array
+  return hashHex; // return hash hex
+}
+async function hashtoByte(hex){
+    hexArray = hex.match(/[\s\S]{1,2}/g) || []; // Hex string to Hex array
+    bytes = hexArray.map(b => parseInt(b, 16)) // Hex array to Byte String
+    return bytes
+}
+
+let x = digestMessage(text)
+  .then(digestHex => {
+      console.log(digestHex)
+      console.log(digestHex.length)
+      return digestHex
+    })
+    .then(hex => {
+        hashtoByte(hex)
+        .then(byte => {
+            console.log(byte)
+        })
+    })
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+User loads webpage
+webpage provides two public keys RSA-PSS, RSA-OEP
+user creates user/pass -- password gets hashed
+username and password are sent to server, encrypted RSA-OEP
+[server receives req]
+verifies: username 3-24 characters, password 8-24 characters (no spaces)
+password encoded using new TextENcoder()
+password converted to Uint8Array()
+server hashes (digest) password using SHA-256
+convert digest to Hex string for storage, store data as {u: username, p: hash}
+if user's username and password fits criteria, make new user folder in seperate db.
+username {userid: userID}
+[server creates RSA-PSS key pair for user signage]
+[server creates RSA-OEP key pair for user communication]
+[server sends user RSA-OEP public key and encryption session authorization]
+[server uses public RSA-OEP key pair to encrypt the user IP, EPOCH]
+user will receive a public key to talk with the server.
+user will receive an encrypted message with user session (IP, EPOCH)
+user data: {pk: [public key], s: [public key encrypted IP, epoch]}
+user opts in PKI or Symmetric additional encryption
+*/
+/*
+if the user chooses symmetric encryption:
+    let user create password (let user choose encryption levels)
+    digest password
+    importkey(digested password)
+
+if the user chooses PKI encryption:
+    generate PKI key pair (RSA-PSS)
+    ask user whether they want to store PK online or not
+*/
+
+    let pw = 'test'
+    let msg = 'message'
+
+    //Best PKI sign/verify
+    let res = await crypto.subtle.generateKey(
+        {
+            name: 'RSA-PSS',
+            modulusLength: 4096,
+            publicExponent: new Uint8Array([1, 0, 1]),
+            hash: "SHA-256"
+        },
+        true,
+        ['sign', 'verify']
+    )
+    res = await crypto.subtle.exportKey('jwk', res)
+
+    //best PKI encrypt/decrypt
+    res = crypto.subtle.generateKey()
+
+
+    async function generateKey(){
+
+    }
+    async function importKey(key){
+        key = new TextEncoder().encode(key)
+        console.log(key)
+        key = await crypto.subtle.importKey(
+            'raw',
+            key,
+            { name: 'HMAC', hash: 'SHA-256' },
+            true,
+            ['verify']
+        )
+        key = await crypto.subtle.exportKey('raw', key)
+        key = btoa(new Uint8Array(key))
+        console.log(key)
+        console.log(atob(key))
+    }
+</script>
+</html>
